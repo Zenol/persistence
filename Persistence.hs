@@ -17,7 +17,8 @@ data AlgoState time field set = AlgoState
     } deriving (Eq, Ord, Show)
 
 -- Think about re,oving all those boilerplate
-addToTable simplex chain st = st {table = Map.insert simplex chain (table st)}
+addToTable :: Ord set =>Simplex set -> (Simplex set, Chain field set) -> AlgoState time field set -> AlgoState time field set
+addToTable idx value st = st {table = Map.insert idx value (table st)}
 updateBarcode :: (Num field) => Int -> (time, time) -> AlgoState time field set -> AlgoState time field set
 updateBarcode k v st = st {barcode = addLine k v (barcode st)}
 markSimplex :: (Num field) => Simplex set -> AlgoState time field set -> AlgoState time field set
@@ -40,12 +41,16 @@ computeBarcode vvv filtration = barcode . storeInfiniteSegments . foldl updateWi
       then
         markSimplex simplex st
       else
-        addToTable simplex' d $
-          updateBarcode (dim simplex') (getDegree simplex, getDegree simplex') st
+        addToTable simplex' (simplex, d) $
+        updateBarcode (dim simplex') (getDegree simplex', getDegree simplex) st'
       where
-        d = deltaSimplex simplex
+        (d, st') = removePivotRow (deltaSimplex simplex) st
         _ = (vvv) .* d -- ugly but infer types
         simplex' = fst . Map.findMax . chainMap $ d
+
+    removePivotRow d st = (d', st)
+      where
+        d' = Chain $ Map.intersection (chainMap d) (Map.fromList $ List.zip (markedList st) [1..])
 
     -- Finish with adding infinite components to barcode
 --  storeInfiniteSegments :: (Ord set) => AlgoState time field set -> AlgoState time field set
@@ -54,3 +59,7 @@ computeBarcode vvv filtration = barcode . storeInfiniteSegments . foldl updateWi
         checkSimplex state simplex = case Map.lookup simplex (table state) of
           Nothing -> updateBarcode (dim simplex) (getDegree simplex, 666) state
           Just _  -> state
+
+-- Example
+-- let f = quickFiltration [["a", "b", "c"], ["ab", "ac"], ["abc"]]
+-- computeBarcode (0 :: Rational) f

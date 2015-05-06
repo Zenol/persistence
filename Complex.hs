@@ -17,7 +17,7 @@ data Simplex set = Simplex {simplexList :: [set]} deriving (Eq)
 
 -- Dimension of a simplex
 dim :: Simplex set -> Int
-dim = (-) 1 . length . simplexList
+dim = (+) (-1) . length . simplexList
 
 -- Order on simplices. It's not the same as order on list.
 instance Ord set => Ord (Simplex set) where
@@ -80,8 +80,9 @@ neg (Chain cl) = Chain (Map.map (\a -> -a) cl)
 
 -- Calculate the boundary of a simplex
 deltaSimplex :: (Num field, Ord set) => Simplex set -> Chain field set
-deltaSimplex (Simplex []) = (Chain $ Map.fromList [])
-deltaSimplex (Simplex xs) = Chain $ (Map.fromList $ browser 1 [] xs)
+deltaSimplex (Simplex [_]) = zero
+deltaSimplex (Simplex [])  = zero
+deltaSimplex (Simplex xs)  = Chain $ (Map.fromList $ browser 1 [] xs)
   where
     browser _ _ [] = []
     browser s l (v : r) = (Simplex (l ++ r), s) : (browser (-s) (l ++ [v]) r)
