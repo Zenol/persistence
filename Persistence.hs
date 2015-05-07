@@ -17,6 +17,19 @@ data AlgoState time field set = AlgoState
     , markedList :: [Simplex set]
     } deriving (Eq, Ord, Show)
 
+-- We need a special order on simplex, based on degree, and simplex's dimension
+data Key time set = Key (Simplex set, time) deriving (Eq, Show)
+
+instance (Ord time, Ord set) => Ord (Key time set) where
+  compare (Key (Simplex a, ta)) (Key (Simplex b, tb)) =
+      case () of _
+                    | la > lb -> GT
+                    | la < lb -> LT
+                    | otherwise -> compare (ta, a) (tb, b)
+    where
+      la = length a
+      lb = length b
+
 -- Think about re,oving all those boilerplate
 addToTable :: Ord set =>Simplex set -> (Simplex set, Chain field set) -> AlgoState time field set -> AlgoState time field set
 addToTable idx value st = st {table = Map.insert idx value (table st)}
@@ -28,30 +41,30 @@ markSimplex simplex st = st { markedList = simplex : (markedList st) }
 instance Default (AlgoState time field set) where
   def = AlgoState Map.empty def []
 
-computeBarcode :: (Ord set, Eq field, Fractional field, Num field, Num time, Show field, Show set) => field -> Filtration time set -> Barcode time
-computeBarcode vvv filtration = barcode . storeInfiniteSegments . foldl updateWithSimplex def $ simplices
+computeBarcode :: (Ord time, Ord set, Eq field, Fractional field, Num field, Num time, Show field, Show set, Show time) => field -> Filtration time set -> Barcode time
+computeBarcode vvv filtration = (trace (show (storeInfiniteSegments . foldl updateWithSimplex def $ simplices))) $barcode . storeInfiniteSegments . foldl updateWithSimplex def $ simplices
   where
     -- Data
     degrees = mapFromFiltration filtration
-    simplices = Set.toList . setFromFiltration $ filtration
+    simplices = Set.toList . Set.fromList . map Key . Map.toList $ degrees
     getDegree simplex = Map.findWithDefault 0 simplex degrees
     maxIndex = fst . Map.findMax . chainMap
     infinity = snd . Map.findMax $ degrees
 
     --Heart of the algorithm
 --  updateWithSimplex :: (Ord set) => AlgoState time field set -> Simplex set -> AlgoState time field set
-    updateWithSimplex st simplex = if (d == zero)
+    updateWithSimplex st (Key (simplex, simplexDegree)) = if (d == zero)
       then
         markSimplex simplex st
       else
         addToTable simplex' (simplex, d) $
         updateBarcode (dim simplex') (getDegree simplex', getDegree simplex) st
       where
-        d = removePivotRow (deltaSimplex simplex) st
+        d = removePivotRows (deltaSimplex simplex) st
         _ = (vvv) .* d -- ugly but infer types
         simplex' = maxIndex d
 
-    removePivotRow d st = simplify d' st
+    removePivotRows d st = simplify d' st
       where
         d' = Chain $ Map.intersection (chainMap d) (Map.fromList $ List.zip (markedList st) [1 :: Integer ..])
         simplify d st = if d == zero

@@ -9,7 +9,6 @@ import Filtration
 import Persistence
 
 -- Global settings
-gStarSize = borderMax / 20
 f = quickFiltration [ ["a", "b"]
                     , ["c", "d", "ab", "bc"]
                     , ["cd", "ad"]
@@ -19,6 +18,7 @@ f = quickFiltration [ ["a", "b"]
                     , ["adb", "dcb"]
                     ]
 gBarcode = computeBarcode (0 :: Double) f
+gStarSize = borderMax / 20
 
 -- Output diagrams
 

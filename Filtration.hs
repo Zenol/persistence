@@ -20,7 +20,7 @@ instance Default (Barcode time) where
 -- A filtration
 data Filtration time set = Filtration {filtrationList :: [(time, Complex set)]} deriving (Eq, Ord)
 
-instance (Show set, Show field) => Show (Filtration field set) where
+instance (Show set, Show time) => Show (Filtration time set) where
   show = foldl (++) "" . map show . filtrationList
 
 -- Transform a simplex into it's normal form simplex, forgeting the orientation
