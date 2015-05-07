@@ -11,8 +11,8 @@ import Complex
 -- A barcode (contain all the k barcodes merged together)
 data Barcode time = Barcode [(Int, (time, time))] deriving (Eq, Ord, Show)
 
-addLine :: Int -> (time, time) -> Barcode time -> Barcode time
-addLine k s (Barcode xs) = Barcode $ (k, s) : xs
+addBar :: Int -> (time, time) -> Barcode time -> Barcode time
+addBar k s (Barcode xs) = Barcode $ (k, s) : xs
 
 instance Default (Barcode time) where
   def = Barcode []
@@ -43,8 +43,8 @@ mapFromFiltration = List.foldl' aux Map.empty . join . map complexToSimplices . 
 
 -- Examples
 
-quickFiltration :: [[String]] -> Filtration Rational Char
-quickFiltration = Filtration . zip [1..] . map Complex . scanl1 (Set.union) . map (complexSet . quickComplex)
+quickFiltration :: [[String]] -> Filtration Double Char
+quickFiltration = Filtration . zip [0..] . map Complex . scanl1 (Set.union) . map (complexSet . quickComplex)
 
 -- Exemple :
 --  quickFiltration [["a", "b", "d"], ["ab", "ac"], ["ad", "abc"]]
