@@ -53,14 +53,14 @@ computeBarcode vvv filtration = (trace (show (storeInfiniteSegments . foldl upda
 
     --Heart of the algorithm
 --  updateWithSimplex :: (Ord set) => AlgoState time field set -> Simplex set -> AlgoState time field set
-    updateWithSimplex st (Key (simplex, simplexDegree)) = if (d == zero)
+    updateWithSimplex st (Key (σj, simplexDegree)) = if (d == zero)
       then
-        markSimplex simplex st
+        markSimplex σj st
       else
-        addToTable simplex' (simplex, d) $
-        updateBarcode (dim simplex') (getDegree simplex', getDegree simplex) st
+        addToTable simplex' (σj, d) $
+        updateBarcode (dim simplex') (getDegree simplex', getDegree σj) st
       where
-        d = removePivotRows (deltaSimplex simplex) st
+        d = removePivotRows (deltaSimplex σj) st
         _ = (vvv) .* d -- ugly but infer types
         simplex' = maxIndex d
 
