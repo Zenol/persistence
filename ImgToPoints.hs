@@ -45,3 +45,6 @@ isMiddlePixelRed fp = do
     go _ = Nothing
     isRed :: PixelRGB8 -> Bool
     isRed (PixelRGB8 r g b) = r == maxBound && g == 0 && b == 0
+
+{-- TODO : Replace (Int, Int) by Point type --}
+

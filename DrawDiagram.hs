@@ -4,21 +4,17 @@ import Diagrams.Prelude
 import Diagrams.Backend.SVG.CmdLine
 import Data.Monoid
 import Control.Applicative
+import System.Environment
 
 import Filtration
 import Persistence
+import ImgToPoints
+import PointsToFiltration
+import qualified Tools
 
 -- Global settings
-f = quickFiltration [ ["a", "b"]
-                    , ["c", "d", "ab", "bc"]
-                    , ["cd", "ad"]
-                    , ["ac"]
-                    , ["abc"]
-                    , ["acd"]
-                    , ["adb", "dcb"]
-                    ]
-gBarcode = computeBarcode (0 :: Double) f
-gStarSize = borderMax / 20
+gBarcode points = computeBarcode (0 :: Double) points
+gStarSize gBarcode = borderMax gBarcode / 20
 
 -- Output diagrams
 
@@ -32,18 +28,19 @@ cross sz color = star (StarSkip 3) (regPoly 7 sz)
                    # lc color
 
 drawBarcode :: Barcode Double -> Diagram B
-drawBarcode (Barcode xs) = foldl1 (atop) $ zipWith drawCross la lb
+drawBarcode gBarcode@(Barcode xs) = foldl1 (atop) $ zipWith drawCross la lb
   where
     (la, lb) = unzip xs
-    drawCross colorIdx coordinates = cross gStarSize (colors!!colorIdx) # (translate . r2 $ coordinates)
+    drawCross colorIdx coordinates = cross (gStarSize gBarcode) (colors!!colorIdx) # (translate . r2 $ coordinates)
 
 
-diag :: Diagram B
-diag = drawBarcode gBarcode `atop` (border borderMax)
+diag :: Filtration Double Tools.Point -> Diagram B
+diag filt = drawBarcode gBarcode `atop` (border $ borderMax gBarcode)
+    where
+      gBarcode = computeBarcode (0 :: Double) filt
 
-borderMax :: Double
-borderMax = maximum . map snd . map snd $ xs
-  where Barcode xs = gBarcode
+borderMax :: Barcode Double -> Double
+borderMax (Barcode xs) = maximum . map snd . map snd $ xs
 
 border :: Double -> Diagram B
 border s = hrule ((sqrt 2) * s) # translate (r2 ((sqrt 2) * s/2, 0)) # rotateBy (1/8) 
@@ -51,5 +48,12 @@ border s = hrule ((sqrt 2) * s) # translate (r2 ((sqrt 2) * s/2, 0)) # rotateBy 
            `atop` vrule s # translate (r2 (0, s/2))
 
 -- Draw a persistence diagram from a barcode
-main :: IO ()
-main = mainWith diag
+main :: IO Int
+main = do
+   putStrLn "Input file name (.bmp, .png, ...):"
+--   input <- getLine
+   points <- loadPoints "./pict1.bmp"
+   case points of
+       Left str -> putStrLn str >> return (-2)
+       Right pts -> mainWith (diag . ripsFiltration dEuclidean $ pts) >> return 0
+   return 0

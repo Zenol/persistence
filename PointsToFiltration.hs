@@ -1,30 +1,49 @@
 module PointsToFiltration where
 
-import qualified Data.Set as Set
+import qualified Data.Set.Monad as Set
 import           Control.Applicative
+import           Control.Monad
 
 import Filtration
 import Complex
+import Tools
 
-type Point = (Int, Int)
+type SimplexSet = Set.Set (Simplex Point)
 
+ripsFiltration :: Distance -> [Point] -> Filtration Double Point
+ripsFiltration = Filtration .^ fmap (\(a, b) -> (a, simplicesToComplex b)) .^ ripsPrefiltration
 
---- WIP. Not not use that  --
-ripsFiltration :: [(Int, Int)] -> Filtration Int (Int, Int)
-ripsFiltration xs = Filtration [(0, complex)]
+-- For each simplex, we have to add faces, and faces of faces, adn so
+simplicesToComplex :: SimplexSet ->  Complex Point
+simplicesToComplex simplices = Complex $ (Set.fromList . faces) =<< simplices
+
+-- Produce a list of points in balls of diameters in the range (0, maxDist)  --
+ripsPrefiltration :: Distance -> [Point] -> [(Double, SimplexSet)]
+ripsPrefiltration d xs = trackEvolv . zip [0 .. maxDist] $ map (ripsComplexStep d) [0 .. maxDist] <*> [xs]
     where
-      complex = foldl nextComplex (Complex Set.empty) $ (map (ripsComplexStep dInfty) [0 .. maxDist]) <*> [xs]
-      nextComplex :: Complex Point -> [Simplex Point] -> Complex Point
-      nextComplex complex simplicies =  Complex $ Set.union (complexSet complex) (Set.fromList simplicies)
-      maxDist :: Int
-      maxDist = (*2) $ maximum . map (\(a, b) -> a + b) $ xs
+      maxDist :: Double
+      maxDist = (*2) $  maximum . map (dInfty (0, 0)) $ xs
+      -- Merge steps where the filtration remain constant
+      trackEvolv :: [(t, SimplexSet)] -> [(t, SimplexSet)]
+      trackEvolv (a@(_,k):b@(_,l):ys) = if k == l
+                                        then a : b : (trackEvolv ys)
+                                        else a : (trackEvolv ys)
+      trackEvolv l = l
 
 -- Compute simplicies made of all points at distance less than dist using the distFct metric.
-ripsComplexStep :: (Point -> Point -> Int) -> Int -> [Point] -> [Simplex Point]
-ripsComplexStep distFct dist points = map (Simplex . flip findNeighbour points) points
+ripsComplexStep :: Distance -> Double -> [Point] -> SimplexSet
+ripsComplexStep distFct dist points = Set.map (Simplex . Set.toList . flip findNeighbour pointSet) pointSet
     where
-      findNeighbour :: Point -> [Point] -> [Point]
-      findNeighbour p = filter (\q -> (distFct p q) < dist)
+      pointSet = Set.fromList points
+      findNeighbour :: Point -> Set.Set Point -> Set.Set Point
+      findNeighbour p = Set.filter (\q -> (distFct p q) <= dist)
 
-dInfty :: Point -> Point -> Int
-dInfty (a, b) (c, d) = max (abs (a-c)) (abs (b-d))
+-- Metric used to compute filtration. Choose the one you love or build your own.
+
+dInfty :: Distance
+dInfty (a, b) (c, d) = fromIntegral $ max (abs (a-c)) (abs (b-d))
+
+dEuclidean :: Distance
+dEuclidean (a, b) (c, d) = sqrt . fromIntegral $ (a-c)^2 + (b-d)^2
+
+

@@ -1,7 +1,7 @@
 module Complex where
 
 import           Control.Monad
-import qualified Data.Set as Set
+import qualified Data.Set.Monad as Set
 import qualified Data.Map as Map
 import qualified Data.Permute as Permute
 import qualified Data.List as List
@@ -9,11 +9,15 @@ import qualified Data.List as List
 -- A complex
 data Complex set = Complex {complexSet :: (Set.Set (Simplex set))} deriving (Eq, Ord)
 
-instance Show set => Show (Complex set) where
+instance (Ord set, Show set) => Show (Complex set) where
   show = show . Set.toList . complexSet
 
 -- A simplex
 data Simplex set = Simplex {simplexList :: [set]} deriving (Eq)
+
+-- Also include the simplex as a face
+faces :: Simplex set -> [Simplex set]
+faces = map Simplex . init . filterM (const [True, False]) . simplexList
 
 -- Dimension of a simplex
 dim :: Simplex set -> Int
