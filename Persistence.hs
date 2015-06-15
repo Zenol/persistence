@@ -42,14 +42,15 @@ instance Default (AlgoState time field set) where
   def = AlgoState Map.empty def []
 
 computeBarcode :: (Ord time, Ord set, Eq field, Fractional field, Num field, Num time, Show field, Show set, Show time) => field -> Filtration time set -> Barcode time
-computeBarcode vvv filtration = (trace (show (storeInfiniteSegments . foldl updateWithSimplex def $ simplices))) $barcode . storeInfiniteSegments . foldl updateWithSimplex def $ simplices
+-- computeBarcode vvv filtration = (trace (show (storeInfiniteSegments . foldl updateWithSimplex def $ simplices))) $barcode . storeInfiniteSegments . foldl updateWithSimplex def $ simplices
+computeBarcode vvv filtration = barcode . storeInfiniteSegments . foldl updateWithSimplex def $ simplices
   where
     -- Data
     degrees = mapFromFiltration filtration
     simplices = Set.toList . Set.fromList . map Key . Map.toList $ degrees
     getDegree simplex = Map.findWithDefault 0 simplex degrees
     maxIndex = fst . Map.findMax . chainMap
-    infinity = snd . Map.findMax $ degrees
+    infinity = maximum . Map.elems $ degrees
 
     --Heart of the algorithm
 --  updateWithSimplex :: (Ord set) => AlgoState time field set -> Simplex set -> AlgoState time field set
@@ -71,8 +72,9 @@ computeBarcode vvv filtration = (trace (show (storeInfiniteSegments . foldl upda
           then d
           else case Map.lookup simplex' (table st) of
                  Nothing         -> d
-                 Just (_, chain) -> trace (show (d, simplex', chain)) $ let q = (Map.findWithDefault 0 simplex' . chainMap $ chain)
-                                                                            a = (Map.findWithDefault 0 simplex' . chainMap $ d)
+--                  Just (_, chain) -> trace (show (d, simplex', chain)) $ let q = (Map.findWithDefault 0 simplex' . chainMap $ chain)
+                 Just (_, chain) -> let q = (Map.findWithDefault 0 simplex' . chainMap $ chain)
+                                        a = (Map.findWithDefault 0 simplex' . chainMap $ d)
                                     in simplify (d .- ((a/q) .* chain)) st -- In the case of the quotient isn't exact; we would like to set the simplex' coef of d to zero)
          where
           simplex' = maxIndex d

@@ -22,13 +22,14 @@ ripsPrefiltration :: Distance -> [Point] -> [(Double, SimplexSet)]
 ripsPrefiltration d xs = trackEvolv . zip [0 .. maxDist] $ map (ripsComplexStep d) [0 .. maxDist] <*> [xs]
     where
       maxDist :: Double
-      maxDist = (*2) $  maximum . map (dInfty (0, 0)) $ xs
-      -- Merge steps where the filtration remain constant
-      trackEvolv :: [(t, SimplexSet)] -> [(t, SimplexSet)]
-      trackEvolv (a@(_,k):b@(_,l):ys) = if k == l
-                                        then a : b : (trackEvolv ys)
-                                        else a : (trackEvolv ys)
-      trackEvolv l = l
+      maxDist = (*2) $ maximum . map (dInfty (0, 0)) $ xs
+
+-- Merge steps where the filtration remain constant
+trackEvolv :: Eq b => [(a, b)] -> [(a, b)]
+trackEvolv (a@(_,k):b@(_,l):ys) = if k == l
+                                  then trackEvolv (a:ys)
+                                  else a : (trackEvolv (b:ys))
+trackEvolv l = l
 
 -- Compute simplicies made of all points at distance less than dist using the distFct metric.
 ripsComplexStep :: Distance -> Double -> [Point] -> SimplexSet
